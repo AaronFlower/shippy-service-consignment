@@ -26,6 +26,10 @@ const (
 // If valid, the call is passed along to the handler. If not, an error is returned.
 func AuthWrapper(fn server.HandlerFunc) server.HandlerFunc {
 	return func(ctx context.Context, req server.Request, resp interface{}) error {
+		if os.Getenv("DISABLE_AUTH") == "true" {
+			return fn(ctx, req, resp)
+		}
+
 		meta, ok := metadata.FromContext(ctx)
 		if !ok {
 			return errors.New("no auth meta-data found in request")
@@ -34,12 +38,12 @@ func AuthWrapper(fn server.HandlerFunc) server.HandlerFunc {
 		// Note this is now uppercase(not entirely sure why this is ...)
 		token := meta["Token"]
 		log.Println("Authentication with token: ", token)
-		authClient := userService.NewAuthClient("go.micro.srv.user", client.DefaultClient)
+		authClient := userService.NewAuthClient("shippy.auth", client.DefaultClient)
 		_, err := authClient.ValidateToken(context.Background(), &userService.Token{
 			Token: token,
 		})
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			return err
 		}
 		err = fn(ctx, req, resp)
@@ -64,13 +68,13 @@ func main() {
 
 	srv := micro.NewService(
 		// This name must match the package name given in your protobuf definition.
-		micro.Name("go.micro.srv.consignment"),
+		micro.Name("shippy.consignment"),
 		micro.Version("latest"),
 		// Our auth middleware
 		micro.WrapHandler(AuthWrapper),
 	)
 
-	vesselClient := vesselProto.NewVesselServiceClient("go.micro.srv.vessel", srv.Client())
+	vesselClient := vesselProto.NewVesselServiceClient("shippy.vessel", srv.Client())
 
 	// Init will parse the command line flags.
 	srv.Init()
