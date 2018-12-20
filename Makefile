@@ -5,9 +5,12 @@ build:
 	docker build --rm -t service.consignment .
 
 run:
-	docker run -p 50051:50051  \
-		-e MICRO_SERVER_ADDRESS=:50051 \
-		-e MICRO_REGISTRY=mdns service.consignment
+	docker run --net="host" \
+		-p 50052  \
+		-e MICRO_SERVER_ADDRESS=:50052 \
+		-e MICRO_REGISTRY=mdns \
+		-e DISABLE_AUTH=true \
+		service.consignment
 	
 clean:
 	go clean
